@@ -5,24 +5,6 @@ final class FileEmbedder {
     let fileName: String
     let options: EmbeddedFileOptions
 
-    // PDF Name escaping: encode delimiter, whitespace, '#' and non-ASCII bytes as #xx
-    private func encodeAsPDFName(_ value: String) -> String {
-        var result = ""
-        for byte in value.utf8 {
-            let isDelimiter = byte == 0x28 /* ( */ || byte == 0x29 /* ) */ || byte == 0x3C /* < */ || byte == 0x3E /* > */ || byte == 0x5B /* [ */ || byte == 0x5D /* ] */ || byte == 0x7B /* { */ || byte == 0x7D /* } */ || byte == 0x2F /* / */ || byte == 0x25 /* % */
-            let isWhitespace = byte <= 0x20
-            let isHash = byte == 0x23 /* # */
-            let isAsciiPrintable = byte >= 0x21 && byte <= 0x7E
-            if isAsciiPrintable && !isDelimiter && !isWhitespace && !isHash {
-                let scalar = UnicodeScalar(byte)
-                result.append(Character(scalar))
-            } else {
-                result.append(String(format: "#%02X", byte))
-            }
-        }
-        return result
-    }
-
     init(fileData: Data, fileName: String, options: EmbeddedFileOptions = EmbeddedFileOptions()) {
         self.fileData = fileData
         self.fileName = fileName
@@ -40,7 +22,7 @@ final class FileEmbedder {
             .first
             .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
         ) ?? "application/octet-stream"
-        let subtypeName = encodeAsPDFName(normalizedMime)
+        let subtypeName = PDFName.encode(normalizedMime)
         var streamDict: [String: PDFObject] = [
             "Type": .name("EmbeddedFile"),
             "Subtype": .name(subtypeName),

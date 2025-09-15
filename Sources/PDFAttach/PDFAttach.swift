@@ -43,7 +43,7 @@ public final class PDFAttach {
         return try context.save()
     }
 
-    public static func extractAttachments(from pdfData: Data, named fileName: String? = nil) throws -> [(String, Data)] {
+    public static func extractAttachments(from pdfData: Data, named fileName: String? = nil) throws -> [(String, Data, String?)] {
         guard let provider = CGDataProvider(data: pdfData as CFData) else { throw PDFAttachError.invalidPDF }
         guard let pdf = CGPDFDocument(provider) else { throw PDFAttachError.invalidPDF }
         guard let catalog = pdf.catalog else { throw PDFAttachError.missingCatalog }
@@ -54,7 +54,7 @@ public final class PDFAttach {
         var namesArray: CGPDFArrayRef?
         guard CGPDFDictionaryGetArray(efDict, "Names", &namesArray), let namesArray = namesArray else { return [] }
         let count = CGPDFArrayGetCount(namesArray)
-        var results: [(String, Data)] = []
+        var results: [(String, Data, String?)] = []
         var i = 0
         while i + 1 < count {
             var nameObj: CGPDFObjectRef?
@@ -73,14 +73,22 @@ public final class PDFAttach {
                         var stream: CGPDFStreamRef?
                         if CGPDFDictionaryGetStream(efSub, "F", &stream), let stream = stream {
                             var format = CGPDFDataFormat.raw
+                            var mimeType: String? = nil
+                            if let streamDict = CGPDFStreamGetDictionary(stream) {
+                                var subtypeNamePtr: UnsafePointer<CChar>? = nil
+                                if CGPDFDictionaryGetName(streamDict, "Subtype", &subtypeNamePtr), let subtypeNamePtr = subtypeNamePtr {
+                                    let raw = String(cString: subtypeNamePtr)
+                                    mimeType = PDFName.decode(raw)
+                                }
+                            }
                             if let cfData = CGPDFStreamCopyData(stream, &format) {
                                 let data = cfData as Data
                                 if let fileName = fileName {
                                     if embeddedFileName == fileName {
-                                        return [(embeddedFileName, data)]
+                                        return [(embeddedFileName, data, mimeType)]
                                     }
                                 } else {
-                                    results.append((embeddedFileName, data))
+                                    results.append((embeddedFileName, data, mimeType))
                                 }
                             }
                         }

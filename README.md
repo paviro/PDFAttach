@@ -45,21 +45,27 @@ let pdfURL = URL(fileURLWithPath: "/path/to/document.pdf")
 let pdfData = try Data(contentsOf: pdfURL)
 
 // Get all attachments (empty array if none)
-let attachments: [(String, Data)] = try PDFAttach.extractAttachments(from: pdfData)
-for (name, data) in attachments {
-    print("Found attachment: \(name) (\(data.count) bytes)")
+let attachments: [(String, Data, String?)] = try PDFAttach.extractAttachments(from: pdfData)
+for (name, data, mime) in attachments {
+    print("Found attachment: \(name) (\(data.count) bytes), mime=\(mime ?? "unknown")")
 }
 
 // Or, get a specific file by name
 let invoice = try PDFAttach.extractAttachments(from: pdfData, named: "invoice.json").first
+if let (name, data, mime) = invoice {
+    print("Got \(name) with mime=\(mime ?? "unknown") and \(data.count) bytes")
+}
 ```
 
 ## Public API
 
 - `PDFAttach.addAttachment(to:fileName:fileData:mimeType) throws -> Data`
   - Returns a new PDF `Data` with the file embedded.
-- `PDFAttach.extractAttachments(from:named:) throws -> [(String, Data)]`
-  - Returns a list of `(fileName, data)` pairs (empty if none). Pass `named:` to filter.
+- `PDFAttach.extractAttachments(from:named:) throws -> [(String, Data, String?)]`
+  - Returns a list of `(fileName, data, mimeType)` tuples (empty if none). Pass `named:` to filter.
+
+Notes:
+- MIME type is stored in the embedded file stream's `Subtype` as a PDF Name. Characters such as `/` are hex-escaped in PDF Names, so the value is decoded back into a conventional MIME string (e.g. `application/json`).
 
 ## How adding the attachment works (brief)
 

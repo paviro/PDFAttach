@@ -42,15 +42,16 @@ import CoreGraphics
     )
 
     // 3) Extract the attachment by name and compare content
-    let extractedPairs = try PDFAttach.extractAttachments(from: attachedPDF, named: fileName)
-    #expect(extractedPairs.count == 1)
+    let extractedTriples = try PDFAttach.extractAttachments(from: attachedPDF, named: fileName)
+    #expect(extractedTriples.count == 1)
 
-    guard let (extractedName, extractedData) = extractedPairs.first else {
+    guard let (extractedName, extractedData, extractedMime) = extractedTriples.first else {
         #expect(Bool(false), "Attachment not found after embedding")
         return
     }
     #expect(extractedName == fileName)
     #expect(extractedData == json)
+    #expect(extractedMime == "application/json")
 
     // 4) Verify the resulting PDF is still openable by CoreGraphics
     guard let provider = CGDataProvider(data: attachedPDF as CFData) else {
